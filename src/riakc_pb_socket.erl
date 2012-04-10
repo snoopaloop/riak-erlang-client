@@ -32,7 +32,7 @@
 -include("riakc_pb.hrl").
 -behaviour(gen_server).
 
--export([start_link/2, start_link/3,
+-export([start_link/1, start_link/2, start_link/3,
          start/2, start/3,
          stop/1,
          set_options/2, set_options/3,
@@ -72,6 +72,10 @@
 -type portnum() :: non_neg_integer(). %% The TCP port number of the Riak node's Protocol Buffers interface
 -type client_option()  :: queue_if_disconnected | {queue_if_disconnected, boolean()} |
                    auto_reconnect | {auto_reconnect, boolean()}.
+
+%% options for starting with poolboy
+-type poolboy_option() :: {host, address()} | {port, portnum()} | {options, client_options()}.
+-type poolboy_options() :: [ poolboy_option() ].
 %% Options for starting or modifying the connection:
 %% `queue_if_disconnected' when present or true will cause requests to
 %% be queued while the connection is down. `auto_reconnect' when
@@ -179,9 +183,16 @@
                 connect_timeout=infinity :: timeout(), % timeout of TCP connection
                 reconnect_interval=?FIRST_RECONNECT_INTERVAL :: non_neg_integer()}).
 
-
+%% @doc Create a linked process for poolboy
+-spec start_link(poolboy_options()) -> {ok, pid()} | {error, term()}.
+start_link(ConnectionOptions) ->
+	Host = proplists:get_value(host, ConnectionOptions, "127.0.0.1"),
+	Port = proplists:get_value(port, ConnectionOptions, 8087),
+	Options = proplists:get_value(options, ConnectionOptions, []),
+	start_link(Host, Port, Options).
+	
 %% @doc Create a linked process to talk with the riak server on Address:Port
-%%      Client id will be assigned by the server.
+%%      Client id will be assigned by the server.	
 -spec start_link(address(), portnum()) -> {ok, pid()} | {error, term()}.
 start_link(Address, Port) ->
     start_link(Address, Port, []).
